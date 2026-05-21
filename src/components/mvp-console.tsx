@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   checkPurchase,
   createSnapshot,
@@ -30,6 +30,27 @@ const minOtpLength = 6;
 const maxOtpLength = 10;
 const otpResetMs = 60_000;
 const otpResendDelayMs = 30_000;
+const spendToastDurationMs = 3600;
+
+const safeSpendMessages = [
+  "Spend recorded. You spent within today's safe range.",
+  "Spend recorded. You're still on track.",
+  "Spend recorded. Your safe-to-spend amount has been updated.",
+  "Spend recorded. Nice, this stays within your limit.",
+  "Spend recorded. You made a controlled spend.",
+  "Spend recorded. You spent wisely and stayed in range.",
+  "Spend recorded. Your budget still has breathing room.",
+];
+
+const cautionSpendMessages = [
+  "Spend recorded. You're getting close to protected money.",
+  "Spend recorded. Your spendable amount is under pressure.",
+  "Spend recorded. You're moving faster toward RM0 spendable.",
+  "Spend recorded. This makes the next few days tighter.",
+  "Spend recorded. Your buffer needs attention now.",
+  "Spend recorded. You're spending beyond the safe pace.",
+  "Spend recorded. Slow down, your spendable room is shrinking.",
+];
 
 function verdictClasses(verdict: Verdict) {
   if (verdict === "Safe") {
@@ -95,18 +116,32 @@ function createClientId() {
   return `check-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function pickRandomMessage(messages: string[]) {
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 type UpdateReturnState = {
   profile: ProfileInput;
   history: PurchaseCheck[];
   result: ReturnType<typeof checkPurchase> | null;
   balanceDraft: string;
   purchaseAmount: string;
+  checkedPurchaseAmount: number | null;
+};
+
+type SpendToast = {
+  message: string;
+  tone: "safe" | "caution";
 };
 
 export function MvpConsole() {
+  const safeToSpendRef = useRef<HTMLDivElement | null>(null);
   const [profile, setProfile] = useState<ProfileInput | null>(null);
   const [history, setHistory] = useState<PurchaseCheck[]>([]);
   const [purchaseAmount, setPurchaseAmount] = useState("18");
+  const [checkedPurchaseAmount, setCheckedPurchaseAmount] = useState<
+    number | null
+  >(null);
   const [balanceDraft, setBalanceDraft] = useState("");
   const [result, setResult] = useState<ReturnType<typeof checkPurchase> | null>(
     null,
@@ -129,6 +164,7 @@ export function MvpConsole() {
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [updateReturnState, setUpdateReturnState] =
     useState<UpdateReturnState | null>(null);
+  const [spendToast, setSpendToast] = useState<SpendToast | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -183,6 +219,16 @@ export function MvpConsole() {
     return () => window.clearInterval(timer);
   }, [otpLockedUntil, otpResendAvailableAt, otpEmailLimitResetAt]);
 
+  useEffect(() => {
+    if (!spendToast) return;
+
+    const timeout = window.setTimeout(() => {
+      setSpendToast(null);
+    }, spendToastDurationMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [spendToast]);
+
   const snapshot = profile ? createSnapshot(profile) : null;
   const inRecovery = snapshot ? shouldEnterRecovery(history, snapshot) : false;
   const usesSupabase = hasSupabaseConfig();
@@ -230,6 +276,7 @@ export function MvpConsole() {
     setHistory([]);
     setBalanceDraft(String(nextProfile.currentBalance));
     setResult(null);
+    setCheckedPurchaseAmount(null);
     setUpdateReturnState(null);
     await saveProfile(nextProfile);
   }
@@ -249,8 +296,40 @@ export function MvpConsole() {
     };
 
     setResult(nextResult);
+    setCheckedPurchaseAmount(amount);
     setHistory((current) => [nextEntry, ...current].slice(0, 8));
     await savePurchaseCheck(nextEntry, profile);
+  }
+
+  async function recordSpend() {
+    if (!profile || checkedPurchaseAmount === null || !result) return;
+
+    const nextProfile = {
+      ...profile,
+      currentBalance: profile.currentBalance - checkedPurchaseAmount,
+      lastBalanceUpdate: new Date().toISOString(),
+    };
+    const isSafeSpend = result.verdict === "Safe";
+
+    setProfile(nextProfile);
+    setBalanceDraft(String(nextProfile.currentBalance));
+    setResult(null);
+    setCheckedPurchaseAmount(null);
+    setSpendToast({
+      message: pickRandomMessage(
+        isSafeSpend ? safeSpendMessages : cautionSpendMessages,
+      ),
+      tone: isSafeSpend ? "safe" : "caution",
+    });
+
+    window.requestAnimationFrame(() => {
+      safeToSpendRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    await saveProfile(nextProfile);
   }
 
   async function updateBalance(event: FormEvent<HTMLFormElement>) {
@@ -274,6 +353,8 @@ export function MvpConsole() {
       setProfile(null);
       setHistory([]);
       setResult(null);
+      setCheckedPurchaseAmount(null);
+      setSpendToast(null);
       setBalanceDraft("");
       setPurchaseAmount("18");
       setOtpCode("");
@@ -300,10 +381,13 @@ export function MvpConsole() {
       result,
       balanceDraft,
       purchaseAmount,
+      checkedPurchaseAmount,
     });
     setProfile(null);
     setHistory([]);
     setResult(null);
+    setCheckedPurchaseAmount(null);
+    setSpendToast(null);
     setBalanceDraft("");
     setPurchaseAmount("18");
   }
@@ -314,8 +398,10 @@ export function MvpConsole() {
     setProfile(updateReturnState.profile);
     setHistory(updateReturnState.history);
     setResult(updateReturnState.result);
+    setSpendToast(null);
     setBalanceDraft(updateReturnState.balanceDraft);
     setPurchaseAmount(updateReturnState.purchaseAmount);
+    setCheckedPurchaseAmount(updateReturnState.checkedPurchaseAmount);
     setUpdateReturnState(null);
   }
 
@@ -439,6 +525,8 @@ export function MvpConsole() {
         state.profile ? String(state.profile.currentBalance) : "",
       );
       setOtpCode("");
+      setCheckedPurchaseAmount(null);
+      setSpendToast(null);
       setOtpRequested(false);
       setOtpAttempts(0);
       setOtpLockedUntil(null);
@@ -462,6 +550,8 @@ export function MvpConsole() {
     setProfile(null);
     setHistory([]);
     setResult(null);
+    setCheckedPurchaseAmount(null);
+    setSpendToast(null);
     setBalanceDraft("");
   }
 
@@ -674,7 +764,10 @@ export function MvpConsole() {
         ) : (
           <div className="mt-8 grid gap-6">
             <div className="grid gap-4 sm:grid-cols-[1.1fr_0.9fr]">
-              <div className="rounded-[1.8rem] bg-[#13261a] p-5 text-[#f7f1e5]">
+              <div
+                ref={safeToSpendRef}
+                className="rounded-[1.8rem] bg-[#13261a] p-5 text-[#f7f1e5] scroll-mt-6"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[#d4ddc6]">
@@ -804,11 +897,18 @@ export function MvpConsole() {
                       </span>
                     </div>
                     <p className="mt-4 text-xl font-semibold">
-                      {currency(Number(purchaseAmount))}
+                      {currency(checkedPurchaseAmount ?? Number(purchaseAmount))}
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[#e5ebde]">
                       {result.consequence}
                     </p>
+                    <button
+                      className="mt-4 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-[#fff8f2] transition-transform hover:-translate-y-0.5"
+                      onClick={recordSpend}
+                      type="button"
+                    >
+                      Spend!
+                    </button>
                   </div>
                 ) : (
                   <p className="mt-5 text-sm leading-6 text-foreground/65">
@@ -939,6 +1039,19 @@ export function MvpConsole() {
           </Link>
         </div>
       </footer>
+
+      {spendToast ? (
+        <div
+          aria-live="polite"
+          className={`fixed left-1/2 top-5 z-50 w-[min(calc(100vw-2rem),26rem)] -translate-x-1/2 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_18px_55px_rgba(19,38,26,0.18)] ${
+            spendToast.tone === "safe"
+              ? "border-signal-safe/25 bg-[#eef7f1] text-signal-safe"
+              : "border-signal-risk/30 bg-[#fff3ec] text-signal-danger"
+          }`}
+        >
+          {spendToast.message}
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -52,10 +52,7 @@ export function getRemainingDays(today = new Date()) {
 
 export function createSnapshot(profile: ProfileInput): Snapshot {
   const remainingDays = getRemainingDays();
-  const spendableBalance = Math.max(
-    0,
-    profile.currentBalance - profile.protectedBuffer,
-  );
+  const spendableBalance = profile.currentBalance - profile.protectedBuffer;
   const safeDaily = spendableBalance / remainingDays;
   const confidence = getConfidence(profile.lastBalanceUpdate);
 
@@ -154,5 +151,7 @@ export function recoveryMessage(history: PurchaseCheck[], snapshot: Snapshot) {
 }
 
 export function currency(value: number) {
-  return `RM${Math.max(0, value).toFixed(0)}`;
+  const prefix = value < 0 ? "-RM" : "RM";
+
+  return `${prefix}${Math.abs(value).toFixed(0)}`;
 }
