@@ -14,9 +14,9 @@ import {
   Verdict,
 } from "@/lib/money";
 import {
+  clearPersistedState,
   hasSupabaseConfig,
   loadPersistedState,
-  resetPersistedState,
   saveProfile,
   savePurchaseCheck,
   signInWithMagicLink,
@@ -95,6 +95,14 @@ function createClientId() {
   return `check-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+type UpdateReturnState = {
+  profile: ProfileInput;
+  history: PurchaseCheck[];
+  result: ReturnType<typeof checkPurchase> | null;
+  balanceDraft: string;
+  purchaseAmount: string;
+};
+
 export function MvpConsole() {
   const [profile, setProfile] = useState<ProfileInput | null>(null);
   const [history, setHistory] = useState<PurchaseCheck[]>([]);
@@ -104,7 +112,6 @@ export function MvpConsole() {
     null,
   );
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<"local" | "supabase">("local");
   const [signedIn, setSignedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -120,6 +127,8 @@ export function MvpConsole() {
   const [lockoutNow, setLockoutNow] = useState(() => Date.now());
   const [authMessage, setAuthMessage] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [updateReturnState, setUpdateReturnState] =
+    useState<UpdateReturnState | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -132,7 +141,6 @@ export function MvpConsole() {
 
         setProfile(state.profile);
         setHistory(state.history);
-        setMode(state.mode);
         setSignedIn(Boolean(state.session));
         setBalanceDraft(
           state.profile ? String(state.profile.currentBalance) : "",
@@ -214,9 +222,15 @@ export function MvpConsole() {
       lastBalanceUpdate: new Date().toISOString(),
     };
 
+    if (updateReturnState) {
+      await clearPersistedState();
+    }
+
     setProfile(nextProfile);
+    setHistory([]);
     setBalanceDraft(String(nextProfile.currentBalance));
     setResult(null);
+    setUpdateReturnState(null);
     await saveProfile(nextProfile);
   }
 
@@ -254,9 +268,9 @@ export function MvpConsole() {
     await saveProfile(nextProfile);
   }
 
-  async function resetDemo() {
+  async function clearData() {
     try {
-      await resetPersistedState();
+      await clearPersistedState();
       setProfile(null);
       setHistory([]);
       setResult(null);
@@ -270,8 +284,39 @@ export function MvpConsole() {
       setOtpEmailLimitResetAt(null);
       setAuthMessage("");
     } catch {
-      setAuthMessage("Could not reset data. Please try again.");
+      setAuthMessage("Could not update data. Please try again.");
     }
+  }
+
+  function startUpdateFlow() {
+    if (!profile) {
+      void clearData();
+      return;
+    }
+
+    setUpdateReturnState({
+      profile,
+      history,
+      result,
+      balanceDraft,
+      purchaseAmount,
+    });
+    setProfile(null);
+    setHistory([]);
+    setResult(null);
+    setBalanceDraft("");
+    setPurchaseAmount("18");
+  }
+
+  function cancelUpdateFlow() {
+    if (!updateReturnState) return;
+
+    setProfile(updateReturnState.profile);
+    setHistory(updateReturnState.history);
+    setResult(updateReturnState.result);
+    setBalanceDraft(updateReturnState.balanceDraft);
+    setPurchaseAmount(updateReturnState.purchaseAmount);
+    setUpdateReturnState(null);
   }
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
@@ -389,7 +434,6 @@ export function MvpConsole() {
       const state = await loadPersistedState();
       setProfile(state.profile);
       setHistory(state.history);
-      setMode(state.mode);
       setSignedIn(Boolean(state.session));
       setBalanceDraft(
         state.profile ? String(state.profile.currentBalance) : "",
@@ -447,19 +491,12 @@ export function MvpConsole() {
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-line bg-surface-strong px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-              {mode === "supabase"
-                ? signedIn
-                  ? "Supabase Sync"
-                  : "Supabase Ready"
-                : "Local Demo"}
-            </span>
             <button
               className="rounded-full border border-line bg-surface-strong px-4 py-2 text-sm font-semibold text-foreground/75 transition-colors hover:bg-white"
-              onClick={resetDemo}
+              onClick={startUpdateFlow}
               type="button"
             >
-              Reset data
+              Update data
             </button>
           </div>
         </div>
@@ -616,12 +653,23 @@ export function MvpConsole() {
               />
             </label>
 
-            <button
-              className="mt-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-[#fff8f2] transition-transform hover:-translate-y-0.5"
-              type="submit"
-            >
-              Calculate safe-to-spend
-            </button>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <button
+                className="rounded-full bg-accent px-6 py-3 text-sm font-semibold text-[#fff8f2] transition-transform hover:-translate-y-0.5"
+                type="submit"
+              >
+                Calculate safe-to-spend
+              </button>
+              {updateReturnState ? (
+                <button
+                  className="rounded-full border border-line bg-white px-5 py-3 text-sm font-semibold text-foreground/70 transition-colors hover:bg-surface-strong"
+                  onClick={cancelUpdateFlow}
+                  type="button"
+                >
+                  Back
+                </button>
+              ) : null}
+            </div>
           </form>
         ) : (
           <div className="mt-8 grid gap-6">

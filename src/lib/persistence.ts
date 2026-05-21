@@ -227,7 +227,7 @@ export async function savePurchaseCheck(entry: PurchaseCheck, profile: ProfileIn
   });
 }
 
-export async function resetPersistedState() {
+export async function clearPersistedState() {
   window.localStorage.removeItem(STORAGE_KEY);
 
   const client = getSupabaseBrowserClient();
