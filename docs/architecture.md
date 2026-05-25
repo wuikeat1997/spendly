@@ -121,9 +121,9 @@ The send-OTP route includes an in-memory email/IP rate limit. This is useful for
 
 ## Data Model
 
-The Supabase schema is defined in [supabase/schema.sql](/Users/wuikeat/Projects/playground/spendly/supabase/schema.sql).
+Supabase changes are versioned under [supabase/migrations](/Users/wuikeat/Projects/playground/spendly/supabase/migrations). The current schema snapshot is kept in [supabase/schema.sql](/Users/wuikeat/Projects/playground/spendly/supabase/schema.sql) for easy reading.
 
-### `ringly_profiles`
+### `profiles`
 
 One row per authenticated user.
 
@@ -138,7 +138,7 @@ Important columns:
 - `created_at`
 - `updated_at`
 
-### `ringly_purchase_checks`
+### `purchase_checks`
 
 Recent safe-to-spend decisions.
 
@@ -209,9 +209,9 @@ Without these variables, the app remains usable in local mode.
 ## Deployment Notes
 
 - Run `npm run build` before deployment.
+- Apply Supabase migrations in filename order before using cloud persistence.
 - Configure Supabase redirect URLs for each deployed domain.
 - Serve over HTTPS for PWA installation and auth redirects.
-- Apply `supabase/schema.sql` before enabling cloud persistence.
 - Treat the in-memory OTP email limiter as prototype-only.
 - Consider adding tests around `money.ts` before changing decision thresholds.
 

@@ -146,7 +146,7 @@ export default function Home() {
 
           <div
             id="rules"
-            className="rounded-[1.8rem] border border-line bg-[#fff7ea] px-6 py-7"
+            className="scroll-mt-6 rounded-[1.8rem] border border-line bg-[#fff7ea] px-6 py-7"
           >
             <p className="font-mono text-xs uppercase tracking-[0.28em] text-accent-deep">
               Core Rule Engine

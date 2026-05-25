@@ -47,6 +47,7 @@ src/lib/
   supabase/server.ts          Server-side Supabase client factory
 
 supabase/
+  migrations/                  Versioned database changes
   schema.sql                  Tables, foreign keys, and RLS policies
 
 docs/
@@ -92,7 +93,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
 ## Supabase Setup
 
 1. Create a Supabase project.
-2. Run [supabase/schema.sql](./supabase/schema.sql) in the SQL editor.
+2. Run the SQL files in [supabase/migrations](./supabase/migrations) in filename order.
 3. Enable email OTP/magic-link auth in Supabase.
 4. Add local and production redirect URLs:
 
@@ -103,9 +104,11 @@ https://your-domain.example/auth/callback
 
 The schema creates:
 
-- `ringly_profiles` for each user's current financial profile.
-- `ringly_purchase_checks` for recent safe-to-spend checks.
+- `profiles` for each user's current financial profile.
+- `purchase_checks` for recent safe-to-spend checks.
 - Row level security policies so users can only manage their own rows.
+
+[supabase/schema.sql](./supabase/schema.sql) is kept as a readable snapshot of the current schema. Use the files in `supabase/migrations/` as the versioned source of truth for applying database changes.
 
 ## Scripts
 

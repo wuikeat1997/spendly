@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import {
   checkPurchase,
   createSnapshot,
@@ -133,6 +132,70 @@ type SpendToast = {
   message: string;
   tone: "safe" | "caution";
 };
+
+type TapTooltipProps = {
+  id: string;
+  label: string;
+  children: ReactNode;
+};
+
+function TapTooltip({ id, label, children }: TapTooltipProps) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeTooltip() {
+      setOpen(false);
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeTooltip();
+      }
+    }
+
+    window.addEventListener("scroll", closeTooltip, { passive: true });
+    window.addEventListener("pointerdown", closeTooltip);
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.removeEventListener("scroll", closeTooltip);
+      window.removeEventListener("pointerdown", closeTooltip);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="group relative">
+      <button
+        aria-describedby={id}
+        aria-expanded={open}
+        aria-label={label}
+        className="flex h-5 w-5 items-center justify-center rounded-full border border-white/14 bg-white/8 text-[11px] font-semibold text-[#eef0de]"
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        type="button"
+      >
+        ?
+      </button>
+      <div
+        id={id}
+        role="tooltip"
+        className={`pointer-events-none absolute left-1/2 top-7 z-10 w-64 -translate-x-1/2 rounded-2xl border border-white/10 bg-[#f4e4c9] p-3 text-left text-xs leading-5 text-[#5b4031] shadow-[0_14px_40px_rgba(12,25,17,0.28)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function MvpConsole() {
   const safeToSpendRef = useRef<HTMLDivElement | null>(null);
@@ -821,20 +884,14 @@ export function MvpConsole() {
                       <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#d4ddc6]">
                         Protected money
                       </p>
-                      <div className="group relative">
-                        <button
-                          aria-label="What is protected money?"
-                          className="flex h-5 w-5 items-center justify-center rounded-full border border-white/14 bg-white/8 text-[11px] font-semibold text-[#eef0de]"
-                          type="button"
-                        >
-                          ?
-                        </button>
-                        <div className="pointer-events-none absolute left-1/2 top-7 z-10 w-64 -translate-x-1/2 rounded-2xl border border-white/10 bg-[#f4e4c9] p-3 text-left text-xs leading-5 text-[#5b4031] opacity-0 shadow-[0_14px_40px_rgba(12,25,17,0.28)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                          Protected money is the amount kept aside for bills,
-                          commitments, and your safety buffer. It is not meant
-                          for casual spending.
-                        </div>
-                      </div>
+                      <TapTooltip
+                        id="protected-money-tip"
+                        label="What is protected money?"
+                      >
+                        Protected money is the amount kept aside for bills,
+                        commitments, and your safety buffer. It is not meant
+                        for casual spending.
+                      </TapTooltip>
                     </div>
                     <p className="mt-2 text-2xl font-semibold">
                       {currency(snapshot!.protectedBuffer)}
@@ -1021,24 +1078,6 @@ export function MvpConsole() {
           </div>
         )}
       </div>
-
-      <footer className="rounded-[1.8rem] border border-line bg-[#13261a] px-5 py-4 text-[#f7f1e5] shadow-[0_24px_90px_rgba(19,38,26,0.16)]">
-        <div className="flex flex-wrap items-center gap-3">
-        
-          <Link
-            className="inline-flex rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm font-semibold text-[#f7f1e5] transition-colors hover:bg-white/12"
-            href="/workspace-notes"
-          >
-            Workspace Notes
-          </Link>
-          <Link
-            className="inline-flex rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm font-semibold text-[#f7f1e5] transition-colors hover:bg-white/12"
-            href="/release-history"
-          >
-            Release History
-          </Link>
-        </div>
-      </footer>
 
       {spendToast ? (
         <div

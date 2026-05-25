@@ -27,6 +27,7 @@ type SendOtpResponse = {
 
 let browserClient: SupabaseClient | null | undefined;
 const SUPABASE_BOOT_TIMEOUT_MS = 4000;
+const SUPABASE_AUTH_TIMEOUT_MS = 15000;
 
 function getSupabasePublishableKey() {
   return (
@@ -126,14 +127,14 @@ export async function loadPersistedState(): Promise<PersistedState> {
     [profileResult, checksResult] = await withTimeout(
       Promise.all([
         client
-          .from("ringly_profiles")
+          .from("profiles")
           .select(
             "monthly_income, monthly_commitments, current_balance, protected_buffer, last_balance_update",
           )
           .eq("user_id", session.user.id)
           .maybeSingle(),
         client
-          .from("ringly_purchase_checks")
+          .from("purchase_checks")
           .select("id, amount, verdict, consequence, checked_at")
           .eq("user_id", session.user.id)
           .order("checked_at", { ascending: false })
@@ -188,7 +189,7 @@ export async function saveProfile(profile: ProfileInput) {
 
   if (!session) return;
 
-  await client.from("ringly_profiles").upsert({
+  await client.from("profiles").upsert({
     user_id: session.user.id,
     monthly_income: profile.monthlyIncome,
     monthly_commitments: profile.monthlyCommitments,
@@ -217,7 +218,7 @@ export async function savePurchaseCheck(entry: PurchaseCheck, profile: ProfileIn
 
   if (!session) return;
 
-  await client.from("ringly_purchase_checks").insert({
+  await client.from("purchase_checks").insert({
     id: entry.id,
     user_id: session.user.id,
     amount: entry.amount,
@@ -243,8 +244,8 @@ export async function clearPersistedState() {
   if (!session) return;
 
   await Promise.all([
-    client.from("ringly_purchase_checks").delete().eq("user_id", session.user.id),
-    client.from("ringly_profiles").delete().eq("user_id", session.user.id),
+    client.from("purchase_checks").delete().eq("user_id", session.user.id),
+    client.from("profiles").delete().eq("user_id", session.user.id),
   ]);
 }
 
@@ -265,7 +266,7 @@ export async function signInWithMagicLink(
         },
         method: "POST",
       }),
-      SUPABASE_BOOT_TIMEOUT_MS,
+      SUPABASE_AUTH_TIMEOUT_MS,
     );
 
     if (!response.ok) {
@@ -308,7 +309,7 @@ export async function verifyEmailOtp(email: string, token: string) {
       token,
       type: "email",
     }),
-    SUPABASE_BOOT_TIMEOUT_MS,
+    SUPABASE_AUTH_TIMEOUT_MS,
   );
 }
 
