@@ -205,10 +205,48 @@ hashed at rest
 30 day rotating refresh token
 ```
 
+## Spendly API
+
+All routes below require an `Authorization: Bearer <accessToken>` header.
+
+```http
+GET    /api/profile
+PUT    /api/profile
+GET    /api/purchase-checks
+POST   /api/purchase-checks
+DELETE /api/me/data
+```
+
+Profile request:
+
+```json
+{
+  "monthlyIncome": 5000,
+  "monthlyCommitments": 2200,
+  "currentBalance": 1800.5,
+  "protectedBuffer": 300,
+  "lastBalanceUpdate": "2026-06-03"
+}
+```
+
+Purchase check request:
+
+```json
+{
+  "amount": 42.9,
+  "verdict": "Safe",
+  "consequence": "This keeps you on track.",
+  "checkedAt": "2026-06-03T04:30:00Z"
+}
+```
+
+`GET /api/purchase-checks` returns the latest 8 checks, newest first. Valid
+verdict values are `Safe`, `Risky`, and `Not safe`.
+
 ## Supabase Sunset Plan
 
-1. Implement replacement auth APIs.
-2. Implement profile APIs.
-3. Implement purchase check history APIs.
+1. Implement replacement auth APIs. Done.
+2. Implement profile APIs. Done.
+3. Implement purchase check history APIs. Done.
 4. Point `spendly-frontend` to this backend.
 5. Remove Supabase routes, packages, and schema files from the frontend.

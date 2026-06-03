@@ -4,7 +4,9 @@
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
 
-    <include file="liquibase/changelog/20260603_wuikeat_0001_create_spendly_core_tables.xml"/>
-    <include file="liquibase/changelog/20260603_wuikeat_0002_create_refresh_tokens_table.xml"/>
-    <include file="liquibase/changelog/20260603_wuikeat_0003_alter_purchase_checks_consequence_type.xml"/>
+    <changeSet id="20260603_wuikeat_0003_alter_purchase_checks_consequence_type" author="wuikeat">
+        <modifyDataType tableName="purchase_checks"
+                columnName="consequence"
+                newDataType="VARCHAR(1000)"/>
+    </changeSet>
 </databaseChangeLog>
