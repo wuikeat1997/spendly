@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+
+    <changeSet id="20260603_wuikeat_0001_create_app_users_table" author="wuikeat">
+        <createTable tableName="app_users">
+            <column name="id" type="VARCHAR(26)">
+                <constraints primaryKey="true" primaryKeyName="pk_app_users" nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(320)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ref_no" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="app_users"
+                columnNames="email"
+                constraintName="uc_app_users_email"/>
+
+        <addUniqueConstraint tableName="app_users"
+                columnNames="ref_no"
+                constraintName="uc_app_users_ref_no"/>
+    </changeSet>
+
+    <changeSet id="20260603_wuikeat_0002_create_profiles_table" author="wuikeat">
+        <createTable tableName="profiles">
+            <column name="user_id" type="VARCHAR(26)">
+                <constraints primaryKey="true"
+                        primaryKeyName="pk_profiles"
+                        nullable="false"
+                        foreignKeyName="fk_profiles_user_id"
+                        references="app_users(id)"/>
+            </column>
+            <column name="monthly_income" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="monthly_commitments" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_balance" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="protected_buffer" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_balance_update" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20260603_wuikeat_0003_create_purchase_checks_table" author="wuikeat">
+        <createTable tableName="purchase_checks">
+            <column name="id" type="VARCHAR(26)">
+                <constraints primaryKey="true" primaryKeyName="pk_purchase_checks" nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(26)">
+                <constraints nullable="false"
+                        foreignKeyName="fk_purchase_checks_user_id"
+                        references="app_users(id)"/>
+            </column>
+            <column name="amount" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="verdict" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consequence" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="checked_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="purchase_checks" indexName="idx_purchase_checks_user_checked_at">
+            <column name="user_id"/>
+            <column name="checked_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260603_wuikeat_0004_create_email_otps_table" author="wuikeat">
+        <createTable tableName="email_otps">
+            <column name="id" type="VARCHAR(26)">
+                <constraints primaryKey="true" primaryKeyName="pk_email_otps" nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(320)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consumed_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="${now}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_modified_by" type="VARCHAR(32)" defaultValue="sys-admin">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="email_otps" indexName="idx_email_otps_email_expires_at">
+            <column name="email"/>
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

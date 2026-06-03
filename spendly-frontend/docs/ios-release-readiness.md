@@ -12,17 +12,30 @@ Spendly should first ship as an iOS-playable PWA:
 
 ## App Store Path
 
-When the PWA proves the product loop, wrap the app for App Store release with Capacitor or a native shell.
+The project now includes a Capacitor iOS shell under `ios/`. The current binary
+path loads the deployed Next.js app from a production HTTPS URL, because the app
+uses server routes for OTP auth and callbacks.
+
+Before creating a TestFlight or App Store archive:
+
+```bash
+CAPACITOR_SERVER_URL=https://your-production-domain.example npm run ios:sync
+npm run ios:open
+```
 
 Before App Store submission, verify:
 
 - Production HTTPS domain is configured.
+- `ios/App/App/capacitor.config.json` points at the production URL, not localhost.
 - Supabase redirect URLs use the production domain.
 - Apple app icons and splash assets are final.
 - Privacy policy is published.
 - App Privacy nutrition labels are prepared.
+- Account deletion/data deletion is available if cloud accounts are enabled.
 - Any paid features use Apple-compliant in-app purchase rules.
 - Offline and poor-network states are reviewed on real iPhones.
+
+See [native-ios-build.md](./native-ios-build.md) for the binary build steps.
 
 ## Device Test Checklist
 

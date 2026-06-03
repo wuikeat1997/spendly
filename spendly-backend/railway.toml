@@ -1,0 +1,7 @@
+[build]
+builder = "RAILPACK"
+
+[deploy]
+startCommand = "java -jar build/libs/spendly-backend.jar"
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 300
