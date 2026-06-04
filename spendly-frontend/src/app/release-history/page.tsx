@@ -1,16 +1,16 @@
 import Link from "next/link";
 
 const releaseNotes = [
-  "Magic-link sign-in is available once your Supabase environment variables are configured.",
-  "Profile and purchase checks persist through the active adapter.",
+  "OTP sign-in is available through the Spendly Java backend.",
+  "Profile and purchase checks persist through the backend API adapter.",
   "The app route now separates product usage from the landing page.",
-  "Supabase schema and row-level policies are ready for setup.",
+  "Local storage remains available when no backend URL is configured.",
 ];
 
 const persistenceSteps = [
-  "Local storage when no Supabase config is present",
-  "Email magic link when Supabase is configured",
-  "Profile row plus purchase-check rows in Postgres",
+  "Local storage when no backend API URL is present",
+  "Email OTP when the Spendly backend is configured",
+  "Profile row plus purchase-check rows in backend Postgres",
   "Ready for a later move to server-side auth guards",
 ];
 
@@ -44,8 +44,8 @@ export default function ReleaseHistoryPage() {
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-foreground/72">
             This release moves the MVP from a local interactive prototype into a
-            Supabase-ready app structure with route separation, persistence
-            adapters, and authentication hooks.
+            backend-backed app structure with route separation, persistence
+            adapters, and OTP authentication hooks.
           </p>
 
           <div className="mt-6 grid gap-3">

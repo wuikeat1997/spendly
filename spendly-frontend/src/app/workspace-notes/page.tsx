@@ -1,16 +1,16 @@
 import Link from "next/link";
 
 const workspaceNotes = [
-  "Magic-link sign-in is available once your env vars are configured.",
-  "Profile and purchase checks persist through the active adapter.",
+  "OTP sign-in is available once your backend API URL is configured.",
+  "Profile and purchase checks persist through the backend API adapter.",
   "The app route can now separate product usage from the landing page.",
-  "Supabase schema and row-level policies are ready for setup.",
+  "Local storage remains available when no backend URL is configured.",
 ];
 
 const persistencePath = [
-  "Local storage when no Supabase config is present",
-  "Email magic link when Supabase is configured",
-  "Profile row plus purchase-check rows in Postgres",
+  "Local storage when no backend API URL is present",
+  "Email OTP when the Spendly backend is configured",
+  "Profile row plus purchase-check rows in backend Postgres",
   "Ready for a later move to server-side auth guards",
 ];
 

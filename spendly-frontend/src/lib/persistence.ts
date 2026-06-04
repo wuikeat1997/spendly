@@ -1,14 +1,24 @@
-import { createBrowserClient } from "@supabase/ssr";
-import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import type { ProfileInput, PurchaseCheck } from "@/lib/money";
 
 const STORAGE_KEY = "ringly-mvp-state";
+const SESSION_KEY = "spendly-api-session";
+const API_BOOT_TIMEOUT_MS = 4000;
+const API_AUTH_TIMEOUT_MS = 15000;
+
+export type ApiSession = {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    refNo: string;
+  };
+};
 
 export type PersistedState = {
   profile: ProfileInput | null;
   history: PurchaseCheck[];
-  session: Session | null;
-  mode: "local" | "supabase";
+  session: ApiSession | null;
+  mode: "local" | "backend";
 };
 
 type StoredState = {
@@ -25,22 +35,21 @@ type SendOtpResponse = {
   resetInSeconds?: number;
 };
 
-let browserClient: SupabaseClient | null | undefined;
-const SUPABASE_BOOT_TIMEOUT_MS = 4000;
-const SUPABASE_AUTH_TIMEOUT_MS = 15000;
+type AuthSessionResponse = {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    refNo: string;
+  };
+};
 
-function getSupabasePublishableKey() {
-  return (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
-    ""
-  );
+function getApiBaseUrl() {
+  return (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 }
 
-function hasSupabaseEnv() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && getSupabasePublishableKey(),
-  );
+function hasApiEnv() {
+  return Boolean(getApiBaseUrl());
 }
 
 function getLocalState(): StoredState {
@@ -65,10 +74,37 @@ function setLocalState(state: StoredState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function getSession(): ApiSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(SESSION_KEY);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as ApiSession;
+  } catch {
+    window.localStorage.removeItem(SESSION_KEY);
+    return null;
+  }
+}
+
+function setSession(session: ApiSession) {
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+function clearSession() {
+  window.localStorage.removeItem(SESSION_KEY);
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => {
-      reject(new Error("Supabase request timed out."));
+      reject(new Error("Backend request timed out."));
     }, timeoutMs);
 
     promise
@@ -78,132 +114,112 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-export function getSupabaseBrowserClient() {
-  if (!hasSupabaseEnv()) {
-    return null;
+async function readError(response: Response, fallback: string) {
+  try {
+    const body = (await response.json()) as { error?: string };
+    return body.error ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function apiFetch<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = API_BOOT_TIMEOUT_MS,
+): Promise<T> {
+  const session = getSession();
+  const headers = new Headers(init.headers);
+
+  if (!headers.has("Content-Type") && init.body) {
+    headers.set("Content-Type", "application/json");
   }
 
-  if (browserClient !== undefined) {
-    return browserClient;
+  if (session) {
+    headers.set("Authorization", `Bearer ${session.accessToken}`);
   }
 
-  browserClient = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    getSupabasePublishableKey(),
+  const response = await withTimeout(
+    fetch(`${getApiBaseUrl()}${path}`, {
+      ...init,
+      headers,
+    }),
+    timeoutMs,
   );
 
-  return browserClient;
+  if (!response.ok) {
+    throw new Error(await readError(response, "Backend request failed."));
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+function toDateOnly(value: string) {
+  return value.slice(0, 10);
+}
+
+function normalizeProfile(profile: ProfileInput): ProfileInput {
+  return {
+    ...profile,
+    lastBalanceUpdate: toDateOnly(profile.lastBalanceUpdate),
+  };
 }
 
 export async function loadPersistedState(): Promise<PersistedState> {
-  const client = getSupabaseBrowserClient();
-
-  if (!client) {
+  if (!hasApiEnv()) {
     const local = getLocalState();
     return { ...local, session: null, mode: "local" };
   }
 
-  let session: Session | null = null;
-
-  try {
-    const result = await withTimeout(
-      client.auth.getSession(),
-      SUPABASE_BOOT_TIMEOUT_MS,
-    );
-    session = result.data.session;
-  } catch {
-    const local = getLocalState();
-    return { ...local, session: null, mode: "local" };
-  }
+  const session = getSession();
 
   if (!session) {
-    return { profile: null, history: [], session: null, mode: "supabase" };
+    return { profile: null, history: [], session: null, mode: "backend" };
   }
 
-  let profileResult;
-  let checksResult;
-
   try {
-    [profileResult, checksResult] = await withTimeout(
-      Promise.all([
-        client
-          .from("profiles")
-          .select(
-            "monthly_income, monthly_commitments, current_balance, protected_buffer, last_balance_update",
-          )
-          .eq("user_id", session.user.id)
-          .maybeSingle(),
-        client
-          .from("purchase_checks")
-          .select("id, amount, verdict, consequence, checked_at")
-          .eq("user_id", session.user.id)
-          .order("checked_at", { ascending: false })
-          .limit(8),
-      ]),
-      SUPABASE_BOOT_TIMEOUT_MS,
-    );
+    const [profile, history] = await Promise.all([
+      apiFetch<ProfileInput | null>("/api/profile").catch((error) => {
+        if (error instanceof Error && error.message.includes("Backend request failed")) {
+          return null;
+        }
+
+        throw error;
+      }),
+      apiFetch<PurchaseCheck[]>("/api/purchase-checks"),
+    ]);
+
+    return {
+      profile,
+      history,
+      session,
+      mode: "backend",
+    };
   } catch {
     const local = getLocalState();
     return { ...local, session, mode: "local" };
   }
-
-  const profile = profileResult.data
-    ? {
-        monthlyIncome: Number(profileResult.data.monthly_income),
-        monthlyCommitments: Number(profileResult.data.monthly_commitments),
-        currentBalance: Number(profileResult.data.current_balance),
-        protectedBuffer: Number(profileResult.data.protected_buffer),
-        lastBalanceUpdate: profileResult.data.last_balance_update,
-      }
-    : null;
-
-  const history =
-    checksResult.data?.map((item) => ({
-      id: item.id,
-      amount: Number(item.amount),
-      verdict: item.verdict as PurchaseCheck["verdict"],
-      consequence: item.consequence,
-      checkedAt: item.checked_at,
-    })) ?? [];
-
-  return {
-    profile,
-    history,
-    session,
-    mode: "supabase",
-  };
 }
 
 export async function saveProfile(profile: ProfileInput) {
-  const client = getSupabaseBrowserClient();
-
-  if (!client) {
+  if (!hasApiEnv() || !getSession()) {
     const local = getLocalState();
     setLocalState({ ...local, profile });
     return;
   }
 
-  const {
-    data: { session },
-  } = await client.auth.getSession();
-
-  if (!session) return;
-
-  await client.from("profiles").upsert({
-    user_id: session.user.id,
-    monthly_income: profile.monthlyIncome,
-    monthly_commitments: profile.monthlyCommitments,
-    current_balance: profile.currentBalance,
-    protected_buffer: profile.protectedBuffer,
-    last_balance_update: profile.lastBalanceUpdate,
-    updated_at: new Date().toISOString(),
+  await apiFetch("/api/profile", {
+    body: JSON.stringify(normalizeProfile(profile)),
+    method: "PUT",
   });
 }
 
 export async function savePurchaseCheck(entry: PurchaseCheck, profile: ProfileInput) {
-  const client = getSupabaseBrowserClient();
-
-  if (!client) {
+  if (!hasApiEnv() || !getSession()) {
     const local = getLocalState();
     setLocalState({
       profile,
@@ -212,61 +228,47 @@ export async function savePurchaseCheck(entry: PurchaseCheck, profile: ProfileIn
     return;
   }
 
-  const {
-    data: { session },
-  } = await client.auth.getSession();
-
-  if (!session) return;
-
-  await client.from("purchase_checks").insert({
-    id: entry.id,
-    user_id: session.user.id,
-    amount: entry.amount,
-    verdict: entry.verdict,
-    consequence: entry.consequence,
-    checked_at: entry.checkedAt,
+  await apiFetch("/api/purchase-checks", {
+    body: JSON.stringify({
+      amount: entry.amount,
+      verdict: entry.verdict,
+      consequence: entry.consequence,
+      checkedAt: entry.checkedAt,
+    }),
+    method: "POST",
   });
 }
 
 export async function clearPersistedState() {
   window.localStorage.removeItem(STORAGE_KEY);
 
-  const client = getSupabaseBrowserClient();
-
-  if (!client) {
+  if (!hasApiEnv() || !getSession()) {
     return;
   }
 
-  const {
-    data: { session },
-  } = await client.auth.getSession();
-
-  if (!session) return;
-
-  await Promise.all([
-    client.from("purchase_checks").delete().eq("user_id", session.user.id),
-    client.from("profiles").delete().eq("user_id", session.user.id),
-  ]);
+  await apiFetch("/api/me/data", {
+    method: "DELETE",
+  });
 }
 
-export async function signInWithMagicLink(
+export async function sendSignInOtp(
   email: string,
   reason: "initial" | "resend" = "initial",
 ) {
-  if (!hasSupabaseEnv()) {
-    return { error: new Error("Supabase is not configured.") };
+  if (!hasApiEnv()) {
+    return { error: new Error("Backend API is not configured.") };
   }
 
   try {
     const response = await withTimeout(
-      fetch("/api/auth/send-otp", {
+      fetch(`${getApiBaseUrl()}/api/auth/send-otp`, {
         body: JSON.stringify({ email, reason }),
         headers: {
           "Content-Type": "application/json",
         },
         method: "POST",
       }),
-      SUPABASE_AUTH_TIMEOUT_MS,
+      API_AUTH_TIMEOUT_MS,
     );
 
     if (!response.ok) {
@@ -297,36 +299,50 @@ export async function signInWithMagicLink(
 }
 
 export async function verifyEmailOtp(email: string, token: string) {
-  const client = getSupabaseBrowserClient();
-
-  if (!client) {
-    return { error: new Error("Supabase is not configured.") };
+  if (!hasApiEnv()) {
+    return { error: new Error("Backend API is not configured.") };
   }
 
-  return withTimeout(
-    client.auth.verifyOtp({
-      email,
-      token,
-      type: "email",
-    }),
-    SUPABASE_AUTH_TIMEOUT_MS,
-  );
+  try {
+    const response = await withTimeout(
+      fetch(`${getApiBaseUrl()}/api/auth/verify-otp`, {
+        body: JSON.stringify({ email, token }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+      API_AUTH_TIMEOUT_MS,
+    );
+
+    if (!response.ok) {
+      return {
+        error: new Error(await readError(response, "Code verification failed.")),
+      };
+    }
+
+    const body = (await response.json()) as AuthSessionResponse;
+    setSession({
+      accessToken: body.accessToken,
+      refreshToken: body.refreshToken,
+      user: body.user,
+    });
+
+    return { error: null };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error
+          : new Error("Code verification failed."),
+    };
+  }
 }
 
 export async function signOut() {
-  const client = getSupabaseBrowserClient();
-
-  if (!client) return;
-
-  await client.auth.signOut();
+  clearSession();
 }
 
-export function hasSupabaseConfig() {
-  return hasSupabaseEnv();
-}
-
-export function getAuthRedirectUrl() {
-  return typeof window !== "undefined"
-    ? `${window.location.origin}/auth/callback`
-    : undefined;
+export function hasBackendConfig() {
+  return hasApiEnv();
 }

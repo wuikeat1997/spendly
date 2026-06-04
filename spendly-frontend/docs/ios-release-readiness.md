@@ -14,7 +14,7 @@ Spendly should first ship as an iOS-playable PWA:
 
 The project now includes a Capacitor iOS shell under `ios/`. The current binary
 path loads the deployed Next.js app from a production HTTPS URL, because the app
-uses server routes for OTP auth and callbacks.
+must run from a stable HTTPS origin for TestFlight/App Store builds.
 
 Before creating a TestFlight or App Store archive:
 
@@ -27,7 +27,8 @@ Before App Store submission, verify:
 
 - Production HTTPS domain is configured.
 - `ios/App/App/capacitor.config.json` points at the production URL, not localhost.
-- Supabase redirect URLs use the production domain.
+- `NEXT_PUBLIC_API_BASE_URL` points at the Railway backend URL.
+- Backend CORS allows the production frontend origin.
 - Apple app icons and splash assets are final.
 - Privacy policy is published.
 - App Privacy nutrition labels are prepared.
@@ -41,7 +42,7 @@ See [native-ios-build.md](./native-ios-build.md) for the binary build steps.
 
 - iPhone Safari can open `/app`.
 - Home-screen install launches without browser chrome.
-- OTP sign-in works from Mail back into Safari/home-screen app.
+- OTP sign-in works in Safari and the home-screen app.
 - Numeric fields do not zoom on focus.
 - Keyboard does not hide primary actions.
 - Safe-to-spend check works on iOS Safari.

@@ -55,7 +55,7 @@ Ideas:
 
 ### Auth Friction
 
-OTP and magic-link login must feel smooth on iOS Safari. Any auth friction can damage first impression.
+OTP login must feel smooth on iOS Safari and the Capacitor shell. Any auth friction can damage first impression.
 
 Next phase should verify:
 
@@ -81,7 +81,7 @@ Avoid shame, guilt, or moralizing.
 - Rename verdicts from absolute language to softer confidence language.
 - Improve stale-balance handling before showing a verdict.
 - Add clearer iOS home-screen install testing.
-- Add friendly empty/error/loading states for auth and Supabase sync.
+- Add friendly empty/error/loading states for auth and backend sync.
 - Add a small "why this verdict?" explanation that is short enough to read before payment.
 - Validate the product with real users by asking whether it changed a spending decision.
 

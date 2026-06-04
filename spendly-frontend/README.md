@@ -4,7 +4,7 @@ Spendly is a mobile-first safe-to-spend app. It helps a user answer one urgent q
 
 > Can I safely make this purchase right now?
 
-The current product is a Next.js PWA prototype with optional Supabase auth and persistence. Without Supabase environment variables, it still runs in local-only mode using `localStorage`.
+The current product is a Next.js PWA prototype with optional Spendly backend auth and persistence. Without a backend API URL, it still runs in local-only mode using `localStorage`.
 
 ## What It Does
 
@@ -14,7 +14,7 @@ The current product is a Next.js PWA prototype with optional Supabase auth and p
 - Warns when the balance estimate is stale.
 - Records recent purchase checks.
 - Updates the current balance when a checked spend is recorded.
-- Supports passwordless email sign-in with Supabase when configured.
+- Supports passwordless email OTP sign-in with the Spendly backend when configured.
 - Runs as an installable iOS-friendly PWA.
 
 ## Tech Stack
@@ -23,7 +23,7 @@ The current product is a Next.js PWA prototype with optional Supabase auth and p
 - React 19
 - TypeScript
 - Tailwind CSS 4
-- Supabase Auth and Postgres, optional at runtime
+- Spendly Java backend API, optional at runtime
 - PWA manifest and iOS web app metadata
 - Capacitor iOS shell for TestFlight/App Store binary builds
 
@@ -33,8 +33,6 @@ The current product is a Next.js PWA prototype with optional Supabase auth and p
 src/app/
   page.tsx                    Marketing/product overview
   app/page.tsx                Main Spendly app shell
-  api/auth/send-otp/route.ts  Server route for passwordless email OTP
-  auth/callback/route.ts      Supabase magic-link callback
   layout.tsx                  App metadata, viewport, manifest hookup
   manifest.ts                 PWA manifest
   globals.css                 Global theme and Tailwind tokens
@@ -44,12 +42,7 @@ src/components/
 
 src/lib/
   money.ts                    Pure safe-to-spend rules
-  persistence.ts              localStorage/Supabase persistence adapter
-  supabase/server.ts          Server-side Supabase client factory
-
-supabase/
-  migrations/                  Versioned database changes
-  schema.sql                  Tables, foreign keys, and RLS policies
+  persistence.ts              localStorage/backend API persistence adapter
 
 docs/
   architecture.md             Technical architecture notes
@@ -83,34 +76,13 @@ Useful routes:
 
 Spendly can run without environment variables. In that mode, data is stored in the browser only.
 
-To enable Supabase auth and cloud persistence, create `.env.local`:
+To enable backend auth and cloud persistence, create `.env.local`:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ```
 
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` is also supported as a fallback key name.
-
-## Supabase Setup
-
-1. Create a Supabase project.
-2. Run the SQL files in [supabase/migrations](./supabase/migrations) in filename order.
-3. Enable email OTP/magic-link auth in Supabase.
-4. Add local and production redirect URLs:
-
-```text
-http://localhost:3000/auth/callback
-https://your-domain.example/auth/callback
-```
-
-The schema creates:
-
-- `profiles` for each user's current financial profile.
-- `purchase_checks` for recent safe-to-spend checks.
-- Row level security policies so users can only manage their own rows.
-
-[supabase/schema.sql](./supabase/schema.sql) is kept as a readable snapshot of the current schema. Use the files in `supabase/migrations/` as the versioned source of truth for applying database changes.
+For production, point `NEXT_PUBLIC_API_BASE_URL` to the Railway backend URL.
 
 ## Scripts
 
@@ -141,8 +113,8 @@ At a high level:
 1. `src/app/app/page.tsx` renders the app shell.
 2. `MvpConsole` owns the interactive UI state.
 3. `src/lib/money.ts` calculates snapshots, verdicts, and recovery messages.
-4. `src/lib/persistence.ts` chooses either Supabase or localStorage.
-5. Supabase server routes handle passwordless sign-in and callback exchange.
+4. `src/lib/persistence.ts` chooses either the Spendly backend API or localStorage.
+5. The Java backend handles OTP sign-in, profile persistence, and purchase-check history.
 
 ## Product Notes
 

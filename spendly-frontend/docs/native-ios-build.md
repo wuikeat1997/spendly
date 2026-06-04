@@ -1,8 +1,8 @@
 # Native iOS Build
 
 Spendly now has a Capacitor iOS shell under `ios/`. The first native build path
-loads the deployed Next.js app in a native iOS WebView, because the current
-Next.js app uses server routes for Supabase OTP auth.
+loads the deployed Next.js app in a native iOS WebView. The app calls the
+Spendly Java backend directly for OTP auth and persistence.
 
 ## Local Simulator Build
 
@@ -50,8 +50,9 @@ Then in Xcode:
 
 - The production Spendly site is served over HTTPS.
 - `CAPACITOR_SERVER_URL` is the exact production origin before archive.
-- Supabase redirect URLs include `https://your-production-domain.example/auth/callback`.
-- Passwordless sign-in works from Mail back into the iOS app flow.
+- `NEXT_PUBLIC_API_BASE_URL` points at the Railway backend URL.
+- Backend CORS allows the production frontend origin.
+- Passwordless OTP sign-in works in the iOS app flow.
 - App Store Connect has a privacy policy URL.
 - App Privacy labels account for email auth, financial profile data, and purchase check history.
 - The app includes account/data deletion if cloud sign-in is enabled.
@@ -61,10 +62,9 @@ Then in Xcode:
 ## Current Constraint
 
 The iOS project is a native shell, not a fully offline native rewrite. The app
-still depends on the deployed Next.js server for API routes and auth callbacks.
-If a fully bundled offline binary becomes a requirement, the auth flow and API
-routes need to move out of Next.js server routes or be replaced with native/API
-client flows.
+still depends on the deployed Next.js frontend and the Railway backend API. If a
+fully bundled offline binary becomes a requirement, the auth flow and API client
+would need a native/offline design.
 
 ## Troubleshooting
 

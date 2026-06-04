@@ -14,11 +14,11 @@ import {
 } from "@/lib/money";
 import {
   clearPersistedState,
-  hasSupabaseConfig,
+  hasBackendConfig,
   loadPersistedState,
   saveProfile,
   savePurchaseCheck,
-  signInWithMagicLink,
+  sendSignInOtp,
   signOut,
   verifyEmailOtp,
 } from "@/lib/persistence";
@@ -26,7 +26,7 @@ import {
 const defaultProtectedBuffer = 300;
 const maxOtpAttempts = 3;
 const minOtpLength = 6;
-const maxOtpLength = 10;
+const maxOtpLength = 6;
 const otpResetMs = 60_000;
 const otpResendDelayMs = 30_000;
 const spendToastDurationMs = 3600;
@@ -294,7 +294,7 @@ export function MvpConsole() {
 
   const snapshot = profile ? createSnapshot(profile) : null;
   const inRecovery = snapshot ? shouldEnterRecovery(history, snapshot) : false;
-  const usesSupabase = hasSupabaseConfig();
+  const usesBackend = hasBackendConfig();
   const otpLocked = otpLockedUntil !== null && lockoutNow < otpLockedUntil;
   const otpSecondsRemaining = otpLockedUntil
     ? Math.max(0, Math.ceil((otpLockedUntil - lockoutNow) / 1000))
@@ -475,7 +475,7 @@ export function MvpConsole() {
 
     try {
       const { error, requestCount, requestLimit, resetAt } =
-        await signInWithMagicLink(email);
+        await sendSignInOtp(email);
 
       if (error) {
         setAuthMessage(error.message);
@@ -495,13 +495,13 @@ export function MvpConsole() {
       setAuthMessage(
         `Email sent. Request ${requestCount ?? 1}/${requestLimit ?? 2}. ${
           resetAt ? `Email request limit resets at ${formatTime(resetAt)}. ` : ""
-        }Open the link or enter the code from your email.`,
+        }Enter the 6-digit code from your email.`,
       );
     } catch (error) {
       setAuthMessage(
         error instanceof Error
           ? error.message
-          : "Magic link failed. Check Supabase Auth URL settings.",
+          : "Sign-in failed. Check backend API settings.",
       );
     } finally {
       setAuthSubmitting(false);
@@ -516,7 +516,7 @@ export function MvpConsole() {
 
     try {
       const { error, requestCount, requestLimit, resetAt } =
-        await signInWithMagicLink(email, "resend");
+        await sendSignInOtp(email, "resend");
 
       if (error) {
         setAuthMessage(error.message);
@@ -541,7 +541,7 @@ export function MvpConsole() {
       setAuthMessage(
         error instanceof Error
           ? error.message
-          : "Could not resend email. Check Supabase Auth settings.",
+          : "Could not resend email. Check backend API settings.",
       );
     } finally {
       setAuthSubmitting(false);
@@ -600,7 +600,7 @@ export function MvpConsole() {
       setAuthMessage(
         error instanceof Error
           ? error.message
-          : "Code verification failed. Check Supabase Auth settings.",
+          : "Code verification failed. Check backend API settings.",
       );
     } finally {
       setAuthSubmitting(false);
@@ -643,29 +643,29 @@ export function MvpConsole() {
               Build the habit before the spend.
             </h2>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          {usesBackend && signedIn ? (
             <button
               className="rounded-full border border-line bg-surface-strong px-4 py-2 text-sm font-semibold text-foreground/75 transition-colors hover:bg-white"
-              onClick={startUpdateFlow}
+              onClick={handleSignOut}
               type="button"
             >
-              Update data
+              Sign out
             </button>
-          </div>
+          ) : null}
         </div>
 
-        {usesSupabase && !signedIn ? (
+        {usesBackend && !signedIn ? (
           <div className="mt-8 grid gap-5">
             <div className="rounded-[1.6rem] border border-line bg-[#fff7ea] p-5">
               <p className="font-mono text-xs uppercase tracking-[0.28em] text-accent-deep">
                 Sign In
               </p>
               <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
-                Save your financial control loop to Supabase.
+                Save your financial control loop to Spendly.
               </h3>
               <p className="mt-3 text-base leading-7 text-foreground/72">
-                This app uses passwordless email sign-in. Open the link from
-                your email or enter the code from that same email.
+                This app uses passwordless email sign-in. Enter the 6-digit code
+                from your email to continue.
               </p>
 
               <form className="mt-5 grid gap-3 sm:max-w-lg" onSubmit={submitAuth}>
@@ -696,7 +696,7 @@ export function MvpConsole() {
                     onChange={(event) =>
                       setOtpCode(event.target.value.replace(/\D/g, ""))
                     }
-                    placeholder="00000000"
+                    placeholder="000000"
                     required
                     type="text"
                     value={otpCode}
@@ -840,13 +840,13 @@ export function MvpConsole() {
                       {currency(snapshot!.safeDaily)}
                     </p>
                   </div>
-                  {usesSupabase && signedIn ? (
+                  {profile ? (
                     <button
                       className="rounded-full border border-white/10 bg-white/6 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[#eef0de]"
-                      onClick={handleSignOut}
+                      onClick={startUpdateFlow}
                       type="button"
                     >
-                      Sign out
+                      Update data
                     </button>
                   ) : null}
                 </div>
