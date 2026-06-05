@@ -1,15 +1,26 @@
+import Image from "next/image";
+
 export default function Home() {
   return (
     <main className="grain min-h-screen">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-6 sm:px-8 lg:px-10">
         <header className="flex items-center justify-between rounded-full border border-line/80 bg-surface px-5 py-3 backdrop-blur-sm">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.32em] text-foreground/65">
-              Spendly
-            </p>
-            <p className="text-sm text-foreground/70">
-              Safe-to-spend control system
-            </p>
+          <div className="flex items-center gap-3">
+            <Image
+              alt=""
+              className="h-11 w-11 rounded-2xl"
+              height={44}
+              src="/spendly-logo.svg"
+              width={44}
+            />
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.32em] text-foreground/65">
+                Spendly
+              </p>
+              <p className="text-sm text-foreground/70">
+                Safe-to-spend control system
+              </p>
+            </div>
           </div>
           <div className="rounded-full border border-signal-safe/25 bg-signal-safe/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.22em] text-signal-safe">
             Approximate. Fast. Honest.
