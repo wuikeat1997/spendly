@@ -5,9 +5,9 @@ spring:
   application:
     name: spendly-backend
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/spendly}
-    username: ${SPRING_DATASOURCE_USERNAME:spendly}
-    password: ${SPRING_DATASOURCE_PASSWORD:spendly}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:spendly}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:spendly}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:spendly}}
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
       data-source-properties:

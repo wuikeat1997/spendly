@@ -161,10 +161,12 @@ spendly-backend
 Add a Railway PostgreSQL database, then configure the backend service variables:
 
 ```text
-SPRING_DATASOURCE_URL=jdbc:postgresql://${{Postgres.RAILWAY_PRIVATE_DOMAIN}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
-SPRING_DATASOURCE_USERNAME=${{Postgres.PGUSER}}
-SPRING_DATASOURCE_PASSWORD=${{Postgres.POSTGRES_PASSWORD}}
 SPRING_PROFILES_ACTIVE=prod
+PGHOST=${{Postgres.PGHOST}}
+PGPORT=${{Postgres.PGPORT}}
+PGDATABASE=${{Postgres.PGDATABASE}}
+PGUSER=${{Postgres.PGUSER}}
+PGPASSWORD=${{Postgres.PGPASSWORD}}
 APP_CORS_ALLOWED_ORIGINS=https://spendly-tawny-two.vercel.app
 APP_FRONTEND_URL=https://spendly-tawny-two.vercel.app
 APP_MAIL_FROM=no-reply@spendly.com
