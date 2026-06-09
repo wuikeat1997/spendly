@@ -2,11 +2,13 @@ package com.spendly.service.impl;
 
 import com.spendly.config.MailProperties;
 import com.spendly.service.EmailDeliveryService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(prefix = "app.mail", name = "provider", havingValue = "smtp", matchIfMissing = true)
 public class SmtpEmailDeliveryService implements EmailDeliveryService {
 
 	private final JavaMailSender mailSender;

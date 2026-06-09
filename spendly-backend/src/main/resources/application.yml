@@ -51,7 +51,11 @@ app:
   frontend:
     url: ${APP_FRONTEND_URL:https://spendly-tawny-two.vercel.app}
   mail:
+    provider: ${APP_MAIL_PROVIDER:smtp}
     from: ${APP_MAIL_FROM:no-reply@spendly.com}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      api-url: ${RESEND_API_URL:https://api.resend.com/emails}
   jwt:
     secret: ${JWT_SECRET:bO8EEH/9fYZ4V/RNtGNSxDfnLpSWjMsuv3/fQNk3IV5n4s88VVaW+Pivi6zwZflTKEM6KQHwiuen/7UzYe1xzONVJtNo7JKoNdyxlpujOzN6AKrO87QjGrqod9MEaAJ5NxXbS9Mb5uEIlB9xsCWyi6Q1vRi+4wQ89JuArWhXSow=}
     access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:60}

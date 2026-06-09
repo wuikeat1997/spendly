@@ -1,0 +1,3 @@
+app:
+  mail:
+    provider: resend

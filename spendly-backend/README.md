@@ -149,6 +149,9 @@ docker compose down -v
 
 ## Railway
 
+For the full Vercel + Railway deployment flow, see
+[`docs/deployment-vercel-railway.md`](../docs/deployment-vercel-railway.md).
+
 Set the Railway service root to:
 
 ```text
@@ -161,16 +164,13 @@ Add a Railway PostgreSQL database, then configure the backend service variables:
 SPRING_DATASOURCE_URL=jdbc:postgresql://${{Postgres.RAILWAY_PRIVATE_DOMAIN}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
 SPRING_DATASOURCE_USERNAME=${{Postgres.PGUSER}}
 SPRING_DATASOURCE_PASSWORD=${{Postgres.POSTGRES_PASSWORD}}
+SPRING_PROFILES_ACTIVE=prod
 APP_CORS_ALLOWED_ORIGINS=https://spendly-tawny-two.vercel.app
 APP_FRONTEND_URL=https://spendly-tawny-two.vercel.app
 APP_MAIL_FROM=no-reply@spendly.com
+APP_MAIL_PROVIDER=resend
+RESEND_API_KEY=<your-resend-api-key>
 JWT_SECRET=<long-random-secret-at-least-32-bytes>
-SPRING_MAIL_HOST=<smtp-host>
-SPRING_MAIL_PORT=<smtp-port>
-SPRING_MAIL_USERNAME=<smtp-username>
-SPRING_MAIL_PASSWORD=<smtp-password>
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
 ```
 
 Railway should run:
