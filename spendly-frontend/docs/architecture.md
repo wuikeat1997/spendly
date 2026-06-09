@@ -10,7 +10,7 @@ Spendly Java backend.
 - Allow local-only usage when no backend URL is configured.
 - Support email OTP sign-in through the backend.
 - Persist profile and recent purchase checks through backend APIs.
-- Keep the app suitable for a Capacitor iOS shell.
+- Keep the app suitable for Capacitor iOS and Android shells.
 
 ## Runtime Flow
 
@@ -71,8 +71,8 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 
 For production and TestFlight builds, set this to the Railway backend HTTPS URL.
 
-## iOS Notes
+## Native Mobile Notes
 
-The Capacitor shell should point at the deployed HTTPS frontend. The frontend in
-turn calls the backend URL from `NEXT_PUBLIC_API_BASE_URL`, so the backend must
-include the deployed frontend origin in its CORS allow-list.
+The Capacitor shells should point at the deployed HTTPS frontend. The frontend
+in turn calls the backend URL from `NEXT_PUBLIC_API_BASE_URL`, so the backend
+must include the deployed frontend origin in its CORS allow-list.

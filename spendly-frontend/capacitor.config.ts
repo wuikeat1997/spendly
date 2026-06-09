@@ -14,6 +14,9 @@ const config: CapacitorConfig = {
     contentInset: "automatic",
     scrollEnabled: true,
   },
+  android: {
+    allowMixedContent: serverUrl.startsWith("http://"),
+  },
 };
 
 export default config;

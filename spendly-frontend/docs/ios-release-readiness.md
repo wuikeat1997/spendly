@@ -1,13 +1,13 @@
-# iOS Release Readiness
+# Mobile Release Readiness
 
 ## Current Target
 
-Spendly should first ship as an iOS-playable PWA:
+Spendly should first ship as a mobile-playable PWA:
 
-- Open in Safari.
+- Open in Safari and Chrome.
 - Add to Home Screen.
 - Run in standalone display mode.
-- Preserve safe-area spacing on iPhone.
+- Preserve safe-area spacing on phones.
 - Keep core checks usable without native APIs.
 
 ## App Store Path
@@ -37,6 +37,7 @@ Before App Store submission, verify:
 - Offline and poor-network states are reviewed on real iPhones.
 
 See [native-ios-build.md](./native-ios-build.md) for the binary build steps.
+See [native-android-build.md](./native-android-build.md) for Android build steps.
 
 ## Device Test Checklist
 
@@ -48,3 +49,5 @@ See [native-ios-build.md](./native-ios-build.md) for the binary build steps.
 - Safe-to-spend check works on iOS Safari.
 - Reset data clears local state.
 - Protected buffer value `0` remains `0`.
+- Android Chrome and Android WebView can open `/app`.
+- Android OTP sign-in works through the backend.
