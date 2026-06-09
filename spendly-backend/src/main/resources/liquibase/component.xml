@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+
+    <include file="liquibase/changelog/20260603_wuikeat_0001_create_spendly_core_tables.xml"/>
+    <include file="liquibase/changelog/20260603_wuikeat_0002_create_refresh_tokens_table.xml"/>
+    <include file="liquibase/changelog/20260603_wuikeat_0003_alter_purchase_checks_consequence_type.xml"/>
+</databaseChangeLog>

@@ -1,0 +1,7 @@
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+startCommand = "java -jar /app/spendly-backend.jar"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300

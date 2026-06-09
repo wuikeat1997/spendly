@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3efe5;
+  --foreground: #13261a;
+  --surface: rgba(255, 252, 246, 0.8);
+  --surface-strong: #fffaf0;
+  --line: rgba(19, 38, 26, 0.14);
+  --accent: #da6a35;
+  --accent-deep: #8b3d1b;
+  --mint: #86b393;
+  --signal-safe: #236948;
+  --signal-risk: #c85f2f;
+  --signal-danger: #9e2f1b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-mint: var(--mint);
+  --color-signal-safe: var(--signal-safe);
+  --color-signal-risk: var(--signal-risk);
+  --color-signal-danger: var(--signal-danger);
+  --font-sans: "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", "SF Mono", "Menlo", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(218, 106, 53, 0.24), transparent 28%),
+    radial-gradient(circle at top right, rgba(134, 179, 147, 0.3), transparent 24%),
+    linear-gradient(180deg, #f6f1e8 0%, #ece5d8 100%);
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  -webkit-tap-highlight-color: rgba(218, 106, 53, 0.16);
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+::selection {
+  background: rgba(218, 106, 53, 0.24);
+}
+
+.grain {
+  position: relative;
+}
+
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2313261a' fill-opacity='.045'%3E%3Ccircle cx='12' cy='14' r='1'/%3E%3Ccircle cx='92' cy='40' r='1'/%3E%3Ccircle cx='52' cy='98' r='1'/%3E%3Ccircle cx='120' cy='118' r='1'/%3E%3Ccircle cx='30' cy='72' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}

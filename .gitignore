@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/spendly-frontend/node_modules
+/spendly-backend/.gradle
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,17 +14,30 @@
 
 # testing
 /coverage
+/spendly-frontend/coverage
 
 # next.js
 /.next/
 /out/
+/spendly-frontend/.next/
+/spendly-frontend/out/
 
 # production
 /build
+/spendly-backend/build
+/spendly-frontend/build
+/spendly-frontend/ios/App/App/capacitor.config.json
+/spendly-frontend/ios/App/App/public/
+/spendly-frontend/ios/App/build/
+/spendly-frontend/ios/App/CapApp-SPM/build/
 
 # misc
 .DS_Store
+.idea
+**/.idea
 *.pem
+codex-next-scaffold
+_bmad-output
 
 # debug
 npm-debug.log*
@@ -35,7 +50,8 @@ yarn-error.log*
 
 # vercel
 .vercel
+/spendly-frontend/.vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+/spendly-frontend/next-env.d.ts

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+
+    <changeSet id="20260603_wuikeat_0003_alter_purchase_checks_consequence_type" author="wuikeat">
+        <modifyDataType tableName="purchase_checks"
+                columnName="consequence"
+                newDataType="VARCHAR(1000)"/>
+    </changeSet>
+</databaseChangeLog>

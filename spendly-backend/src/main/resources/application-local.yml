@@ -1,0 +1,14 @@
+app:
+  mail:
+    provider: smtp
+
+spring:
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
