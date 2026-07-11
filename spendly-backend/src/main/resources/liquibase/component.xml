@@ -7,4 +7,5 @@
     <include file="liquibase/changelog/20260603_wuikeat_0001_create_spendly_core_tables.xml"/>
     <include file="liquibase/changelog/20260603_wuikeat_0002_create_refresh_tokens_table.xml"/>
     <include file="liquibase/changelog/20260603_wuikeat_0003_alter_purchase_checks_consequence_type.xml"/>
+    <include file="liquibase/changelog/20260711_wuikeat_0001_harden_refresh_token_sessions.xml"/>
 </databaseChangeLog>

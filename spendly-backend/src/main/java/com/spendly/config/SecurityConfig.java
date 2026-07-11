@@ -36,7 +36,8 @@ public class SecurityConfig {
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/api/**")
 				.permitAll()
-				.requestMatchers("/api/auth/send-otp", "/api/auth/verify-otp", "/api/auth/refresh")
+				.requestMatchers("/api/auth/send-otp", "/api/auth/verify-otp", "/api/auth/refresh",
+						"/api/auth/sign-out")
 				.permitAll()
 				.requestMatchers("/api/health", "/actuator/health", "/actuator/info")
 				.permitAll()

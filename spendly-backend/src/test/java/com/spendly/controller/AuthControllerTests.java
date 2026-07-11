@@ -1,9 +1,12 @@
 package com.spendly.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -60,7 +63,9 @@ class AuthControllerTests {
 			.perform(post("/api/auth/verify-otp").contentType(MediaType.APPLICATION_JSON).content("""
 					{
 					  "email": "%s",
-					  "token": "%s"
+					  "token": "%s",
+					  "deviceId": "browser-one",
+					  "deviceName": "Chrome"
 					}
 					""".formatted(email, otp)))
 			.andExpect(status().isOk())
@@ -100,7 +105,9 @@ class AuthControllerTests {
 			.perform(post("/api/auth/verify-otp").contentType(MediaType.APPLICATION_JSON).content("""
 					{
 					  "email": "refresh@spendly.com",
-					  "token": "%s"
+					  "token": "%s",
+					  "deviceId": "phone-one",
+					  "deviceName": "iPhone"
 					}
 					""".formatted(otpCaptor.getValue())))
 			.andExpect(status().isOk())
@@ -113,7 +120,9 @@ class AuthControllerTests {
 		String refreshedBody = mockMvc
 			.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("""
 					{
-					  "refreshToken": "%s"
+					  "refreshToken": "%s",
+					  "deviceId": "phone-one",
+					  "deviceName": "iPhone"
 					}
 					""".formatted(refreshToken)))
 			.andExpect(status().isOk())
@@ -131,6 +140,64 @@ class AuthControllerTests {
 				  "refreshToken": "%s"
 				}
 				""".formatted(refreshToken))).andExpect(status().isUnauthorized());
+
+		mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "refreshToken": "%s"
+				}
+				""".formatted(rotatedRefreshToken))).andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void signOutRevokesRefreshToken() throws Exception {
+		AuthTokens tokens = signIn("signout@spendly.com", "browser-signout", "Safari");
+
+		mockMvc.perform(post("/api/auth/sign-out").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "refreshToken": "%s"
+				}
+				""".formatted(tokens.refreshToken()))).andExpect(status().isNoContent());
+
+		mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "refreshToken": "%s"
+				}
+				""".formatted(tokens.refreshToken()))).andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void listsAndRevokesActiveSessions() throws Exception {
+		AuthTokens first = signIn("sessions@spendly.com", "browser-a", "Chrome");
+		signIn("sessions@spendly.com", "browser-b", "Firefox");
+
+		String sessionsBody = mockMvc
+			.perform(get("/api/auth/sessions").header("Authorization", "Bearer " + first.accessToken())
+				.param("currentDeviceId", "browser-a"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].id").isString())
+			.andExpect(jsonPath("$[?(@.deviceId == 'browser-a')].currentDevice").value(contains(true)))
+			.andExpect(jsonPath("$[?(@.deviceId == 'browser-b')].deviceName").value(contains("Firefox")))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		JsonNode sessions = objectMapper.readTree(sessionsBody);
+		String sessionToRevoke = null;
+		for (JsonNode session : sessions) {
+			if ("browser-b".equals(session.get("deviceId").asText())) {
+				sessionToRevoke = session.get("id").asText();
+			}
+		}
+		assertThat(sessionToRevoke).isNotNull();
+
+		mockMvc
+			.perform(delete("/api/auth/sessions/{sessionId}", sessionToRevoke).header("Authorization",
+					"Bearer " + first.accessToken()))
+			.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/auth/sessions").header("Authorization", "Bearer " + first.accessToken()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[?(@.deviceId == 'browser-b')]").isEmpty());
 	}
 
 	@Test
@@ -143,6 +210,39 @@ class AuthControllerTests {
 				"""))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error").value("OTP must be exactly 6 digits."));
+	}
+
+	private AuthTokens signIn(String email, String deviceId, String deviceName) throws Exception {
+		reset(emailDeliveryService);
+		ArgumentCaptor<String> otpCaptor = ArgumentCaptor.forClass(String.class);
+
+		mockMvc.perform(post("/api/auth/send-otp").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "email": "%s"
+				}
+				""".formatted(email))).andExpect(status().isOk());
+
+		verify(emailDeliveryService).sendOtp(eq(email), otpCaptor.capture());
+
+		String authBody = mockMvc
+			.perform(post("/api/auth/verify-otp").contentType(MediaType.APPLICATION_JSON).content("""
+					{
+					  "email": "%s",
+					  "token": "%s",
+					  "deviceId": "%s",
+					  "deviceName": "%s"
+					}
+					""".formatted(email, otpCaptor.getValue(), deviceId, deviceName)))
+			.andExpect(status().isOk())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		JsonNode auth = objectMapper.readTree(authBody);
+		return new AuthTokens(auth.get("accessToken").asText(), auth.get("refreshToken").asText());
+	}
+
+	private record AuthTokens(String accessToken, String refreshToken) {
 	}
 
 }

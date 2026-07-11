@@ -2,6 +2,7 @@ import type { ProfileInput, PurchaseCheck } from "@/lib/money";
 
 const STORAGE_KEY = "ringly-mvp-state";
 const SESSION_KEY = "spendly-api-session";
+const DEVICE_KEY = "spendly-device-id";
 const API_BOOT_TIMEOUT_MS = 4000;
 const API_AUTH_TIMEOUT_MS = 15000;
 
@@ -101,6 +102,35 @@ function clearSession() {
   window.localStorage.removeItem(SESSION_KEY);
 }
 
+function getDeviceId() {
+  if (typeof window === "undefined") {
+    return "server";
+  }
+
+  const existing = window.localStorage.getItem(DEVICE_KEY);
+
+  if (existing) {
+    return existing;
+  }
+
+  const generated =
+    window.crypto?.randomUUID?.() ??
+    `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  window.localStorage.setItem(DEVICE_KEY, generated);
+  return generated;
+}
+
+function getDeviceName() {
+  if (typeof window === "undefined") {
+    return "Unknown device";
+  }
+
+  const userAgentData = navigator as Navigator & {
+    userAgentData?: { platform?: string };
+  };
+  return userAgentData.userAgentData?.platform ?? navigator.platform ?? "Unknown device";
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => {
@@ -127,6 +157,7 @@ async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
   timeoutMs = API_BOOT_TIMEOUT_MS,
+  retryOnUnauthorized = true,
 ): Promise<T> {
   const session = getSession();
   const headers = new Headers(init.headers);
@@ -139,13 +170,29 @@ async function apiFetch<T>(
     headers.set("Authorization", `Bearer ${session.accessToken}`);
   }
 
-  const response = await withTimeout(
+  let response = await withTimeout(
     fetch(`${getApiBaseUrl()}${path}`, {
       ...init,
       headers,
     }),
     timeoutMs,
   );
+
+  if (response.status === 401 && session?.refreshToken && retryOnUnauthorized) {
+    const refreshed = await refreshSession(session.refreshToken);
+
+    if (refreshed) {
+      const retryHeaders = new Headers(headers);
+      retryHeaders.set("Authorization", `Bearer ${refreshed.accessToken}`);
+      response = await withTimeout(
+        fetch(`${getApiBaseUrl()}${path}`, {
+          ...init,
+          headers: retryHeaders,
+        }),
+        timeoutMs,
+      );
+    }
+  }
 
   if (!response.ok) {
     throw new Error(await readError(response, "Backend request failed."));
@@ -156,6 +203,41 @@ async function apiFetch<T>(
   }
 
   return (await response.json()) as T;
+}
+
+async function refreshSession(refreshToken: string) {
+  try {
+    const response = await withTimeout(
+      fetch(`${getApiBaseUrl()}/api/auth/refresh`, {
+        body: JSON.stringify({
+          refreshToken,
+          deviceId: getDeviceId(),
+          deviceName: getDeviceName(),
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+      API_AUTH_TIMEOUT_MS,
+    );
+
+    if (!response.ok) {
+      clearSession();
+      return null;
+    }
+
+    const body = (await response.json()) as AuthSessionResponse;
+    const session = {
+      accessToken: body.accessToken,
+      refreshToken: body.refreshToken,
+      user: body.user,
+    };
+    setSession(session);
+    return session;
+  } catch {
+    return null;
+  }
 }
 
 function toDateOnly(value: string) {
@@ -306,7 +388,12 @@ export async function verifyEmailOtp(email: string, token: string) {
   try {
     const response = await withTimeout(
       fetch(`${getApiBaseUrl()}/api/auth/verify-otp`, {
-        body: JSON.stringify({ email, token }),
+        body: JSON.stringify({
+          email,
+          token,
+          deviceId: getDeviceId(),
+          deviceName: getDeviceName(),
+        }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -340,6 +427,21 @@ export async function verifyEmailOtp(email: string, token: string) {
 }
 
 export async function signOut() {
+  const session = getSession();
+
+  if (hasApiEnv() && session?.refreshToken) {
+    await withTimeout(
+      fetch(`${getApiBaseUrl()}/api/auth/sign-out`, {
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+      API_AUTH_TIMEOUT_MS,
+    ).catch(() => undefined);
+  }
+
   clearSession();
 }
 

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+
+    <changeSet id="20260711_wuikeat_0001_harden_refresh_token_sessions" author="wuikeat">
+        <addColumn tableName="refresh_tokens">
+            <column name="token_family_id" type="VARCHAR(26)"/>
+            <column name="device_id" type="VARCHAR(64)"/>
+            <column name="device_name" type="VARCHAR(120)"/>
+            <column name="user_agent" type="VARCHAR(255)"/>
+            <column name="last_used_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="replaced_by_token_id" type="VARCHAR(26)"/>
+            <column name="reuse_detected_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </addColumn>
+
+        <sql>
+            UPDATE refresh_tokens
+            SET token_family_id = id,
+                device_id = 'legacy-' || id,
+                last_used_at = COALESCE(last_modified_at, created_at, ${now})
+        </sql>
+
+        <addNotNullConstraint tableName="refresh_tokens"
+                columnName="token_family_id"
+                columnDataType="VARCHAR(26)"/>
+        <addNotNullConstraint tableName="refresh_tokens"
+                columnName="device_id"
+                columnDataType="VARCHAR(64)"/>
+        <addNotNullConstraint tableName="refresh_tokens"
+                columnName="last_used_at"
+                columnDataType="TIMESTAMP WITH TIME ZONE"/>
+
+        <addForeignKeyConstraint baseTableName="refresh_tokens"
+                baseColumnNames="replaced_by_token_id"
+                constraintName="fk_refresh_tokens_replaced_by_token_id"
+                referencedTableName="refresh_tokens"
+                referencedColumnNames="id"/>
+
+        <createIndex tableName="refresh_tokens" indexName="idx_refresh_tokens_token_hash">
+            <column name="token_hash"/>
+        </createIndex>
+
+        <createIndex tableName="refresh_tokens" indexName="idx_refresh_tokens_token_family_id">
+            <column name="token_family_id"/>
+        </createIndex>
+
+        <createIndex tableName="refresh_tokens" indexName="idx_refresh_tokens_active_user">
+            <column name="user_id"/>
+            <column name="revoked_at"/>
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
